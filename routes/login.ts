@@ -66,8 +66,7 @@ module.exports = function login () {
         next(error)
       })
   }]
-  // vuln-code-snippet end loginAdminChallenge loginBenderChallenge loginJimChallenge
-
+  
   function verifyPreLoginChallenges (req: Request) {
     challengeUtils.solveIf(challenges.weakPasswordChallenge, () => { return req.body.email === 'admin@' + config.get<string>('application.domain') && req.body.password === 'admin123' })
     challengeUtils.solveIf(challenges.loginSupportChallenge, () => { return req.body.email === 'support@' + config.get<string>('application.domain') && req.body.password === 'J6aVjTgOpRs@?5l!Zkq2AYnCE@RF$P' })
