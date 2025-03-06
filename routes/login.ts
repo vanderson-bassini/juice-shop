@@ -11,10 +11,16 @@ import { UserModel } from '../models/user'
 import challengeUtils = require('../lib/challengeUtils')
 import config from 'config'
 import { challenges } from '../data/datacache'
-
 import * as utils from '../lib/utils'
 const security = require('../lib/insecurity')
 const users = require('../data/datacache').users
+const rateLimit = require('express-rate-limit');
+
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10, // Limite de 10 tentativas de login por IP
+  message: 'Muitas tentativas de login. Por favor, tente novamente mais tarde.'
+});
 
 // vuln-code-snippet start loginAdminChallenge loginBenderChallenge loginJimChallenge
 module.exports = function login () {
@@ -31,7 +37,7 @@ module.exports = function login () {
       })
   }
 
-  return (req: Request, res: Response, next: NextFunction) => {
+  return [loginRateLimiter, (req: Request, res: Response, next: NextFunction) => {
     verifyPreLoginChallenges(req) // vuln-code-snippet hide-line
     models.sequelize.query('SELECT * FROM Users WHERE email = ? AND password = ? AND deletedAt IS NULL', {
       replacements: [req.body.email || '', security.hash(req.body.password || '')],
@@ -59,9 +65,8 @@ module.exports = function login () {
       }).catch((error: Error) => {
         next(error)
       })
-  }
-  // vuln-code-snippet end loginAdminChallenge loginBenderChallenge loginJimChallenge
-
+  }]
+  
   function verifyPreLoginChallenges (req: Request) {
     challengeUtils.solveIf(challenges.weakPasswordChallenge, () => { return req.body.email === 'admin@' + config.get<string>('application.domain') && req.body.password === 'admin123' })
     challengeUtils.solveIf(challenges.loginSupportChallenge, () => { return req.body.email === 'support@' + config.get<string>('application.domain') && req.body.password === 'J6aVjTgOpRs@?5l!Zkq2AYnCE@RF$P' })
